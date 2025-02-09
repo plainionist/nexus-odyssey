@@ -7,40 +7,39 @@
 <script setup lang="ts">
   import { onMounted, ref } from 'vue'
   import { listen } from '@tauri-apps/api/event'
-  import ForceGraph3D from '3d-force-graph'
+  import ForceGraph3D, { ForceGraph3DInstance, Graph, GraphLink, GraphNode } from '3d-force-graph'
 
   const canvas = ref<HTMLElement | null>(null)
 
-  function loadGraph(data: any, graph: any) {
-    const gData = JSON.parse(data)
+  function loadGraph(json: string, presentation: ForceGraph3DInstance) {
+    const graph = JSON.parse(json) as Graph
 
-    const nodeMap = Object.fromEntries(gData.nodes.map((node: any) => [node.id, node]))
+    const nodeMap = Object.fromEntries(graph.nodes.map((node) => [node.id, node]))
 
-    gData.links.forEach((link: any) => {
+    graph.links.forEach((link) => {
       const a = nodeMap[link.source]
       const b = nodeMap[link.target]
 
-      console.log(a, b)
       a.neighbors = a.neighbors || []
       b.neighbors = b.neighbors || []
       a.neighbors.push(b)
       b.neighbors.push(a)
 
-      !a.links && (a.links = [])
-      !b.links && (b.links = [])
+      a.links = a.links || []
+      b.links = b.links || []
       a.links.push(link)
       b.links.push(link)
     })
 
-    graph.graphData(gData)
+    presentation.graphData(graph)
   }
 
   onMounted(async () => {
     const highlightNodes = new Set()
     const highlightLinks = new Set()
-    let hoverNode: any = null
+    let hoverNode: GraphNode | null = null
 
-    const graph = new ForceGraph3D(document.getElementById('canvas')!)
+    const presentation = new ForceGraph3D(document.getElementById('canvas')!)
       .nodeLabel('id')
       .nodeAutoColorBy('group')
       .nodeColor((node) =>
@@ -60,23 +59,24 @@
         const newPos =
           node.x || node.y || node.z ? { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio } : { x: 0, y: 0, z: distance } // special case if node is in (0,0,0)
 
-        graph.cameraPosition(
+        presentation.cameraPosition(
           newPos, // new position
           node, // lookAt ({ x, y, z })
           3000 // ms transition duration
         )
       })
-      .onNodeDragEnd((node: any) => {
+      .onNodeDragEnd((node: GraphNode) => {
         node.fx = node.x
         node.fy = node.y
         node.fz = node.z
       })
-      .onNodeHover((node: any) => {
+      .onNodeHover((node?: GraphNode, _?: GraphNode) => {
         // no state change
         if ((!node && !highlightNodes.size) || (node && hoverNode === node)) return
 
         highlightNodes.clear()
         highlightLinks.clear()
+
         if (node && node.neighbors) {
           highlightNodes.add(node)
           node.neighbors.forEach((neighbor: any) => highlightNodes.add(neighbor))
@@ -87,7 +87,7 @@
 
         updateHighlight()
       })
-      .onLinkHover((link: any) => {
+      .onLinkHover((link?: GraphLink, _?: GraphLink) => {
         highlightNodes.clear()
         highlightLinks.clear()
 
@@ -102,15 +102,18 @@
 
     function updateHighlight() {
       // trigger update of highlighted objects in scene
-      graph.nodeColor(graph.nodeColor()).linkWidth(graph.linkWidth()).linkDirectionalParticles(graph.linkDirectionalParticles())
+      presentation
+        .nodeColor(presentation.nodeColor())
+        .linkWidth(presentation.linkWidth())
+        .linkDirectionalParticles(presentation.linkDirectionalParticles())
     }
 
     window.addEventListener('resize', () => {
-      graph.width(canvas.value!.clientWidth)
-      graph.height(canvas.value!.clientHeight)
+      presentation.width(canvas.value!.clientWidth)
+      presentation.height(canvas.value!.clientHeight)
     })
 
-    listen('load:json', (e: any) => loadGraph(e.payload, graph))
+    listen<string>('load:json', (event) => loadGraph(event.payload, presentation))
   })
 </script>
 
