@@ -104,7 +104,7 @@
       // trigger update of highlighted objects in scene
       graph.nodeColor(graph.nodeColor()).linkWidth(graph.linkWidth()).linkDirectionalParticles(graph.linkDirectionalParticles())
     }
-    
+
     window.addEventListener('resize', () => {
       graph.width(canvas.value!.clientWidth)
       graph.height(canvas.value!.clientHeight)
