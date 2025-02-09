@@ -10,6 +10,9 @@
   import ForceGraph3D, { ForceGraph3DInstance, Graph, GraphLink, GraphNode } from '3d-force-graph'
 
   const canvas = ref<HTMLElement | null>(null)
+  const highlightNodes = new Set()
+  const highlightLinks = new Set()
+  let hoverNode: GraphNode | null = null
 
   function addNeighbors(graph: Graph) {
     const nodeMap = Object.fromEntries(graph.nodes.map((node) => [node.id, node]))
@@ -55,17 +58,52 @@
       .linkDirectionalParticles(presentation.linkDirectionalParticles())
   }
 
-  onMounted(async () => {
-    const highlightNodes = new Set()
-    const highlightLinks = new Set()
-    let hoverNode: GraphNode | null = null
+  function highlightNode(presentation: ForceGraph3DInstance, node?: GraphNode) {
+    // no state change
+    if ((!node && !highlightNodes.size) || (node && hoverNode === node)) return
 
+    highlightNodes.clear()
+    highlightLinks.clear()
+
+    if (node && node.neighbors) {
+      highlightNodes.add(node)
+      node.neighbors.forEach((neighbor: any) => highlightNodes.add(neighbor))
+      node.links.forEach((link: any) => highlightLinks.add(link))
+    }
+
+    hoverNode = node || null
+
+    updateHighlight(presentation)
+  }
+
+  function highlightLink(presentation: ForceGraph3DInstance, link?: GraphLink) {
+    highlightNodes.clear()
+    highlightLinks.clear()
+
+    if (link) {
+      highlightLinks.add(link)
+      highlightNodes.add(link.source)
+      highlightNodes.add(link.target)
+    }
+
+    updateHighlight(presentation)
+  }
+
+  function fixNodePosition(node: GraphNode) {
+    node.fx = node.x
+    node.fy = node.y
+    node.fz = node.z
+  }
+
+  function getNodeColor(node: GraphNode) {
+    return highlightNodes.has(node) ? (node === hoverNode ? 'rgb(255,0,0,1)' : 'rgba(255,160,0,0.8)') : 'rgba(0,255,255,0.6)'
+  }
+
+  onMounted(async () => {
     const presentation = new ForceGraph3D(document.getElementById('canvas')!)
       .nodeLabel('id')
       .nodeAutoColorBy('group')
-      .nodeColor((node) =>
-        highlightNodes.has(node) ? (node === hoverNode ? 'rgb(255,0,0,1)' : 'rgba(255,160,0,0.8)') : 'rgba(0,255,255,0.6)'
-      )
+      .nodeColor((node) => getNodeColor(node))
       .linkWidth((link) => (highlightLinks.has(link) ? 4 : 1))
       .linkDirectionalParticles((link) => (highlightLinks.has(link) ? 4 : 0))
       .linkDirectionalParticleWidth(4)
@@ -73,40 +111,9 @@
       .linkDirectionalArrowLength(3.5)
       .linkDirectionalArrowRelPos(1)
       .onNodeClick((node: GraphNode) => lookAt(presentation, node))
-      .onNodeDragEnd((node: GraphNode) => {
-        node.fx = node.x
-        node.fy = node.y
-        node.fz = node.z
-      })
-      .onNodeHover((node?: GraphNode, _?: GraphNode) => {
-        // no state change
-        if ((!node && !highlightNodes.size) || (node && hoverNode === node)) return
-
-        highlightNodes.clear()
-        highlightLinks.clear()
-
-        if (node && node.neighbors) {
-          highlightNodes.add(node)
-          node.neighbors.forEach((neighbor: any) => highlightNodes.add(neighbor))
-          node.links.forEach((link: any) => highlightLinks.add(link))
-        }
-
-        hoverNode = node || null
-
-        updateHighlight(presentation)
-      })
-      .onLinkHover((link?: GraphLink, _?: GraphLink) => {
-        highlightNodes.clear()
-        highlightLinks.clear()
-
-        if (link) {
-          highlightLinks.add(link)
-          highlightNodes.add(link.source)
-          highlightNodes.add(link.target)
-        }
-
-        updateHighlight(presentation)
-      })
+      .onNodeDragEnd((node: GraphNode) => fixNodePosition(node))
+      .onNodeHover((node?: GraphNode, _?: GraphNode) => highlightNode(presentation, node))
+      .onLinkHover((link?: GraphLink, _?: GraphLink) => highlightLink(presentation, link))
 
     window.addEventListener('resize', () => {
       presentation.width(canvas.value!.clientWidth)
