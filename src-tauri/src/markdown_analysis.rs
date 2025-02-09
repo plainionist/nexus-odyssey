@@ -21,6 +21,8 @@ fn scan_markdown_files(dir: &Path, model: &POSModel) -> io::Result<HashMap<Strin
             let entry = entry?;
             let path = entry.path();
 
+            println!("Scanning {:?}", path);
+
             if path.is_dir() {
                 let nested_files = scan_markdown_files(&path, model)?;
                 file_word_map.extend(nested_files);
@@ -53,5 +55,10 @@ pub fn analyze(dir: &Path) -> io::Result<String> {
     let config = POSConfig::default();
     let model = POSModel::new(config).map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
 
-    scan_markdown_files(dir, &model).map(|result| serde_json::to_string(&result).unwrap())
+    // .map(|result| )
+    scan_markdown_files(dir, &model).map(|result| {
+        let json = serde_json::to_string(&result).unwrap();
+        println!("Analysis complete ... {}", json);
+        "{}".to_string()
+    })
 }
