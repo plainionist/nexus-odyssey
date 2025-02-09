@@ -1,7 +1,8 @@
 mod dot_parser;
+mod markdown_analysis;
 
-use std::path::Path;
 use std::io::{Error, ErrorKind};
+use std::path::Path;
 use tauri::menu::*;
 use tauri::Emitter;
 use tauri::Manager;
@@ -23,7 +24,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let file_menu = SubmenuBuilder::new(app, "File")
-                .text("open", "Open")
+                .text("open", "Open ...")
+                .text("analyze-markdown", "Analyze MarkDown ...")
                 .separator()
                 .quit()
                 .build()?;
@@ -44,6 +46,25 @@ pub fn run() {
                             .as_path()
                             .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "Invalid file path"))
                             .and_then(read_file)
+                            .and_then(|content| {
+                                app.emit("load:json", content)
+                                    .map_err(|e| Error::new(ErrorKind::Other, e))
+                            })
+                        {
+                            eprintln!("Failed to read and emit JSON file: {}", err);
+                        }
+                    }
+                }
+                else if event.id() == "analyze-markdown" {
+                    if let Some(folder_path) = app
+                        .dialog()
+                        .file()
+                        .blocking_pick_folder()
+                    {
+                        if let Err(err) = folder_path
+                            .as_path()
+                            .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "Invalid folder path"))
+                            .and_then(markdown_analysis::analyze)
                             .and_then(|content| {
                                 app.emit("load:json", content)
                                     .map_err(|e| Error::new(ErrorKind::Other, e))
