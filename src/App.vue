@@ -104,6 +104,11 @@
       // trigger update of highlighted objects in scene
       graph.nodeColor(graph.nodeColor()).linkWidth(graph.linkWidth()).linkDirectionalParticles(graph.linkDirectionalParticles())
     }
+    
+    window.addEventListener('resize', () => {
+      graph.width(canvas.value!.clientWidth)
+      graph.height(canvas.value!.clientHeight)
+    })
 
     listen('load:json', (e: any) => loadGraph(e.payload, graph))
   })
@@ -138,17 +143,13 @@
     margin: 0;
     width: 100%;
     height: 100%;
-    display: flex; /* Ensure child elements stretch */
-  }
-  .scene-container {
-    width: 100%;
-    height: 100%;
+    display: flex;
   }
 
   #canvas {
     width: 100%;
     height: 100%;
-    display: block; /* Ensures the div stretches */
+    display: block;
   }
 
   @media (prefers-color-scheme: dark) {
