@@ -37,8 +37,7 @@ pub fn run() {
                     if let Some(file_path) = app
                         .dialog()
                         .file()
-                        .add_filter("DOT", &["dot"])
-                        .add_filter("JSON", &["json"])
+                        .add_filter("Json|Dot", &["dot", "json"])
                         .blocking_pick_file()
                     {
                         if let Err(err) = file_path
