@@ -1,64 +1,74 @@
-use rust_bert::pipelines::pos_tagging::{POSConfig, POSModel, POSTag};
-use std::collections::HashMap;
-use std::collections::HashSet;
+use gray_matter::engine::YAML;
+use gray_matter::Matter;
 use std::fs;
 use std::io;
 use std::path::Path;
-use std::sync::LazyLock;
 
-static NOUN_TAGS: LazyLock<HashSet<&'static str>> =
-    LazyLock::new(|| ["NN", "NNS", "NNP", "NNPS"].iter().cloned().collect());
+#[derive(Debug, serde::Serialize)]
+struct MarkdownMeta {
+    title: String,
+    file_path: String,
+    tags: Vec<String>,
+}
 
-fn scan_markdown_files(dir: &Path, model: &POSModel) -> io::Result<HashMap<String, Vec<String>>> {
-    let mut file_word_map = HashMap::new();
+#[derive(serde::Deserialize, Debug)]
+struct FrontMatter {
+    title: String,
+    tags: String,
+}
+
+fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
+    let mut metadata_list = Vec::new();
+
+    let matter = Matter::<YAML>::new();
 
     if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
-            if file_word_map.len() >= 50 {
+            if metadata_list.len() >= 50 {
                 break;
             }
 
             let entry = entry?;
             let path = entry.path();
 
-            println!("Scanning {:?}", path);
-
             if path.is_dir() {
-                let nested_files = scan_markdown_files(&path, model)?;
-                file_word_map.extend(nested_files);
+                let nested_files = scan_markdown_files(&path)?;
+                metadata_list.extend(nested_files);
             } else if path.extension().map_or(false, |ext| ext == "md") {
                 if let Ok(contents) = fs::read_to_string(&path) {
-                    let predictions = model.predict(&[contents]);
+                    let result = matter.parse(&contents);
+                    println!("Parsed front matter: {:?}", result.data);
+                    let front_matter: Option<FrontMatter> = result.data.and_then(|x| x.deserialize().ok());
 
-                    let proper_nouns: Vec<String> = predictions
-                        .into_iter()
-                        .flatten()
-                        .filter_map(|token: POSTag| {
-                            if NOUN_TAGS.contains(token.label.as_str()) {
-                                Some(token.word)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect();
+                    let file_name = path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("Unnamed")
+                        .to_string();
 
-                    file_word_map.insert(path.to_string_lossy().to_string(), proper_nouns);
+                    metadata_list.push(MarkdownMeta {
+                        title: front_matter.as_ref().map_or_else(|| file_name, |x| x.title.clone()),
+                        file_path: path.to_string_lossy().to_string(),
+                        tags: front_matter.map_or_else(Vec::new, |x| {
+                            x.tags
+                                .split(' ')
+                                .map(|s| s.trim().to_string())
+                                .filter(|x| !x.is_empty())
+                                .collect()
+                        }),
+                    });
                 }
             }
         }
     }
 
-    Ok(file_word_map)
+    Ok(metadata_list)
 }
 
 pub fn analyze(dir: &Path) -> io::Result<String> {
-    let config = POSConfig::default();
-    let model = POSModel::new(config).map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
-
-    // .map(|result| )
-    scan_markdown_files(dir, &model).map(|result| {
-        let json = serde_json::to_string(&result).unwrap();
-        println!("Analysis complete ... {}", json);
-        "{}".to_string()
+    scan_markdown_files(dir).map(|result| {
+        let json = serde_json::to_string_pretty(&result).unwrap();
+        println!("Analysis complete:\n{}", json);
+        json
     })
 }
