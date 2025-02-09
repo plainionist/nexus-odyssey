@@ -1,8 +1,19 @@
-use std::fs::read_to_string;
+mod dot_parser;
+
+use std::path::Path;
+use std::io::{Error, ErrorKind};
 use tauri::menu::*;
 use tauri::Emitter;
 use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
+
+fn read_file(path: &Path) -> std::io::Result<String> {
+    match path.extension().and_then(|ext| ext.to_str()) {
+        Some("json") => std::fs::read_to_string(path),
+        Some("dot") => dot_parser::parse_dot_to_json(path),
+        _ => Err(Error::new(ErrorKind::InvalidInput, "Unsupported file type")),
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -23,14 +34,23 @@ pub fn run() {
 
             app.on_menu_event(move |app, event| {
                 if event.id() == "open" {
-                    if let Some(file_path) = app.dialog().file().add_filter("JSON", &["json"]).blocking_pick_file() {
-                        match read_to_string(file_path.as_path().unwrap()) {
-                            Ok(content) => {
-                                app.emit("load:json", content).expect("Emit 'load:json' failed");
-                            }
-                            Err(err) => {
-                                eprintln!("Failed to read file: {}", err);
-                            }
+                    if let Some(file_path) = app
+                        .dialog()
+                        .file()
+                        .add_filter("DOT", &["dot"])
+                        .add_filter("JSON", &["json"])
+                        .blocking_pick_file()
+                    {
+                        if let Err(err) = file_path
+                            .as_path()
+                            .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "Invalid file path"))
+                            .and_then(read_file)
+                            .and_then(|content| {
+                                app.emit("load:json", content)
+                                    .map_err(|e| Error::new(ErrorKind::Other, e))
+                            })
+                        {
+                            eprintln!("Failed to read and emit JSON file: {}", err);
                         }
                     }
                 }
