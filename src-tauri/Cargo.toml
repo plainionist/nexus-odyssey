@@ -25,4 +25,4 @@ serde_json = "1"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs =  { version = "2.0.0", features = ["watch"] }
 dot-parser = "0.3.3"
-
+rust-bert = "0.23"
