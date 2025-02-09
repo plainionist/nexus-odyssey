@@ -1,5 +1,7 @@
 use gray_matter::engine::YAML;
 use gray_matter::Matter;
+use serde_json::json;
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -15,6 +17,77 @@ struct MarkdownMeta {
 struct FrontMatter {
     title: String,
     tags: String,
+}
+
+#[derive(Debug, serde::Serialize, Eq, PartialEq, Hash)]
+struct Node {
+    id: String,
+    title: Option<String>,
+    group: i32
+}
+
+#[derive(Debug, serde::Serialize, Eq, PartialEq, Hash)]
+struct Link {
+    source: String,
+    target: String,
+    value: i32,
+}
+
+fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
+    let mut nodes = HashSet::new();
+    let mut links = HashSet::new();
+
+    // Add file nodes
+    for file in &metadata_list {
+        nodes.insert(Node {
+            id: file.file_path.clone(),
+            title: Some(file.title.clone()),
+            group: 1
+        });
+
+        // Process tags
+        for tag in &file.tags {
+            let tags: Vec<&str> = tag.split('/').collect();
+            let mut iter = tags.iter();
+
+            if let Some(mut parent) = iter.next() {
+                nodes.insert(Node {
+                    id: parent.to_string(),
+                    title: None,
+                    group: 2
+                });
+
+                for child in iter {
+                    nodes.insert(Node {
+                        id: child.to_string(),
+                        title: None,
+                        group: 2
+                    });
+
+                    // Create topic hierarchy link: "compiler" → "warnings"
+                    links.insert(Link {
+                        source: parent.to_string(),
+                        target: child.to_string(),
+                        value: 1,
+                    });
+
+                    parent = child;
+                }
+
+                // Link file to tag
+                links.insert(Link {
+                    source: file.file_path.clone(),
+                    target: parent.to_string().clone(),
+                    value: 1,
+                });
+            }
+        }
+    }
+
+    json!({
+        "nodes": nodes.into_iter().collect::<Vec<_>>(),
+        "links": links.into_iter().collect::<Vec<_>>()
+    })
 }
 
 fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
@@ -67,7 +140,8 @@ fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
 
 pub fn analyze(dir: &Path) -> io::Result<String> {
     scan_markdown_files(dir).map(|result| {
-        let json = serde_json::to_string_pretty(&result).unwrap();
+        let graph_json = build_graph(result);
+        let json = serde_json::to_string_pretty(&graph_json).unwrap();
         println!("Analysis complete:\n{}", json);
         json
     })
