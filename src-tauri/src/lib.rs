@@ -1,6 +1,8 @@
+use std::fs::read_to_string;
 use tauri::menu::*;
 use tauri::Emitter;
 use tauri::Manager;
+use tauri_plugin_dialog::DialogExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -11,8 +13,6 @@ pub fn run() {
         .setup(|app| {
             let file_menu = SubmenuBuilder::new(app, "File")
                 .text("open", "Open")
-                .text("save", "Save")
-                .text("export-svg", "Export SVG")
                 .separator()
                 .quit()
                 .build()?;
@@ -23,11 +23,16 @@ pub fn run() {
 
             app.on_menu_event(move |app, event| {
                 if event.id() == "open" {
-                    app.emit("menu:open", {}).expect("Emit 'menu:open' failed");
-                } else if event.id() == "save" {
-                    app.emit("menu:save", {}).expect("Emit 'menu:save' failed");
-                } else if event.id() == "export-svg" {
-                    app.emit("menu:export-svg", {}).expect("Emit 'menu:export-svg' failed");
+                    if let Some(file_path) = app.dialog().file().add_filter("JSON", &["json"]).blocking_pick_file() {
+                        match read_to_string(file_path.as_path().unwrap()) {
+                            Ok(content) => {
+                                app.emit("load:json", content).expect("Emit 'load:json' failed");
+                            }
+                            Err(err) => {
+                                eprintln!("Failed to read file: {}", err);
+                            }
+                        }
+                    }
                 }
             });
 
