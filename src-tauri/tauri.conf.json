@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "Mind Elixir Shell",
+        "title": "Nexus Odyssey",
         "width": 1800,
-        "height": 1080
+        "height": 1000
       }
     ],
     "security": {
