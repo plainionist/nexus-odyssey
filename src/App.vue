@@ -7,9 +7,15 @@
 <script setup lang="ts">
   import { onMounted } from 'vue'
   //import { listen } from '@tauri-apps/api/event'
+  import ForceGraph3D from '3d-force-graph'
+  import Miserables from './miserables.json'
 
   onMounted(async () => {
-    console.log('mounted')
+    new ForceGraph3D(document.getElementById('canvas')!)
+      .graphData(Miserables)
+      .nodeLabel('id')
+      .nodeAutoColorBy('group')
+
     // listen('menu:open', openFile)
     // listen('menu:save', saveFile)
     // listen('menu:export-svg', exportSvg)
