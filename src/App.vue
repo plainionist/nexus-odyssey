@@ -11,9 +11,7 @@
 
   const canvas = ref<HTMLElement | null>(null)
 
-  function loadGraph(json: string, presentation: ForceGraph3DInstance) {
-    const graph = JSON.parse(json) as Graph
-
+  function addNeighbors(graph: Graph) {
     const nodeMap = Object.fromEntries(graph.nodes.map((node) => [node.id, node]))
 
     graph.links.forEach((link) => {
@@ -30,8 +28,31 @@
       a.links.push(link)
       b.links.push(link)
     })
+  }
 
+  function loadGraph(presentation: ForceGraph3DInstance, json: string) {
+    const graph = JSON.parse(json) as Graph
+    addNeighbors(graph)
     presentation.graphData(graph)
+  }
+
+  function lookAt(presentation: ForceGraph3DInstance, node: GraphNode) {
+    // Aim at node from outside it
+    const distance = 70
+    const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z)
+
+    const newPos =
+      node.x || node.y || node.z ? { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio } : { x: 0, y: 0, z: distance } // special case if node is in (0,0,0)
+
+    presentation.cameraPosition(newPos, node, 3000)
+  }
+
+  function updateHighlight(presentation: ForceGraph3DInstance) {
+    // trigger update of highlighted objects in scene
+    presentation
+      .nodeColor(presentation.nodeColor())
+      .linkWidth(presentation.linkWidth())
+      .linkDirectionalParticles(presentation.linkDirectionalParticles())
   }
 
   onMounted(async () => {
@@ -51,20 +72,7 @@
       .showNavInfo(false)
       .linkDirectionalArrowLength(3.5)
       .linkDirectionalArrowRelPos(1)
-      .onNodeClick((node: any) => {
-        // Aim at node from outside it
-        const distance = 70
-        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z)
-
-        const newPos =
-          node.x || node.y || node.z ? { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio } : { x: 0, y: 0, z: distance } // special case if node is in (0,0,0)
-
-        presentation.cameraPosition(
-          newPos, // new position
-          node, // lookAt ({ x, y, z })
-          3000 // ms transition duration
-        )
-      })
+      .onNodeClick((node: GraphNode) => lookAt(presentation, node))
       .onNodeDragEnd((node: GraphNode) => {
         node.fx = node.x
         node.fy = node.y
@@ -85,7 +93,7 @@
 
         hoverNode = node || null
 
-        updateHighlight()
+        updateHighlight(presentation)
       })
       .onLinkHover((link?: GraphLink, _?: GraphLink) => {
         highlightNodes.clear()
@@ -97,23 +105,15 @@
           highlightNodes.add(link.target)
         }
 
-        updateHighlight()
+        updateHighlight(presentation)
       })
-
-    function updateHighlight() {
-      // trigger update of highlighted objects in scene
-      presentation
-        .nodeColor(presentation.nodeColor())
-        .linkWidth(presentation.linkWidth())
-        .linkDirectionalParticles(presentation.linkDirectionalParticles())
-    }
 
     window.addEventListener('resize', () => {
       presentation.width(canvas.value!.clientWidth)
       presentation.height(canvas.value!.clientHeight)
     })
 
-    listen<string>('load:json', (event) => loadGraph(event.payload, presentation))
+    listen<string>('load:json', (event) => loadGraph(presentation, event.payload))
   })
 </script>
 

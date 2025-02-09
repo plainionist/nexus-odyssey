@@ -1,5 +1,13 @@
 declare module '3d-force-graph' {
-  export interface GraphNode {
+
+  export interface Point3d {
+    x: number
+    y: number
+    z: number
+  }
+
+
+  export interface GraphNode extends Point3d {
     id: string | number
     [key: string]: any // Allow additional properties
   }
@@ -13,12 +21,6 @@ declare module '3d-force-graph' {
   export interface Graph {
     nodes: GraphNode[]
     links: GraphLink[]
-  }
-
-  export interface Point3d {
-    x: Number
-    y: Number
-    z: Number
   }
 
   export interface ForceGraph3DInstance {
