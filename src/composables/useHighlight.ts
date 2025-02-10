@@ -60,19 +60,21 @@ export function useHighlight(self: ForceGraph3DInstance) {
     updateHighlight()
   }
 
-  function getNodeColor(node: GraphNode) {
-    return highlightNodes.has(node) ? (node === hoverNode ? 'rgb(255,0,0,1)' : 'rgba(255,160,0,0.8)') : 'rgba(0,255,255,0.6)'
+  function isHovered(item: GraphNode) {
+    return item === hoverNode
   }
 
-  function isHighlighted(link: GraphLink) {
-    return highlightLinks.has(link)
+  function isHighlighted(item: GraphLink | GraphNode) {
+    const node = item as GraphNode
+    if (node.id !== undefined) return highlightNodes.has(node)
+    else highlightLinks.has(item as GraphLink)
   }
 
   return {
     addNeighbors,
     highlightNode,
     highlightLink,
-    getNodeColor,
-    isHighlighted
+    isHighlighted,
+    isHovered
   }
 }

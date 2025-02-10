@@ -32,12 +32,14 @@
   onMounted(async () => {
     const presentation = new ForceGraph3D(document.getElementById('canvas')!)
 
-    const { addNeighbors, highlightNode, highlightLink, getNodeColor, isHighlighted } = useHighlight(presentation)
+    const { addNeighbors, highlightNode, highlightLink, isHighlighted, isHovered } = useHighlight(presentation)
+
+    const HOVER_COLOR = 'rgb(255,0,0,1)'
+    const HIGHLIGHT_COLOR = 'rgba(255,160,0,0.8)'
 
     presentation
-      .nodeLabel('id')
-      .nodeAutoColorBy('group')
-      .nodeColor((node) => getNodeColor(node))
+      .nodeLabel('title')
+      .nodeColor((node) => isHighlighted(node) ? (isHovered(node) ? HOVER_COLOR : HIGHLIGHT_COLOR) : 'rgba(0,255,255,0.6)')
       .linkWidth((link) => (isHighlighted(link) ? 4 : 1))
       .linkDirectionalParticles((link) => (isHighlighted(link) ? 4 : 0))
       .linkDirectionalParticleWidth(4)

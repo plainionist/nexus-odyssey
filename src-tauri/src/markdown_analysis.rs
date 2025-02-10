@@ -22,8 +22,8 @@ struct FrontMatter {
 #[derive(Debug, serde::Serialize, Eq, PartialEq, Hash)]
 struct Node {
     id: String,
-    title: Option<String>,
-    group: i32
+    title: String,
+    kind: String
 }
 
 #[derive(Debug, serde::Serialize, Eq, PartialEq, Hash)]
@@ -41,44 +41,46 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
     for file in &metadata_list {
         nodes.insert(Node {
             id: file.file_path.clone(),
-            title: Some(file.title.clone()),
-            group: 1
+            title: file.title.clone(),
+            kind: "file".to_string()
         });
 
         // Process tags
         for tag in &file.tags {
-            let tags: Vec<&str> = tag.split('/').collect();
-            let mut iter = tags.iter();
+            let parts: Vec<&str> = tag.split('/').collect();
+            let mut path = String::new();
+            let mut parent: Option<String> = None;
 
-            if let Some(mut parent) = iter.next() {
+            for part in parts {
+                if !path.is_empty() {
+                    path.push('/');
+                }
+                path.push_str(part);
+
                 nodes.insert(Node {
-                    id: parent.to_string(),
-                    title: None,
-                    group: 2
+                    id: path.clone(),
+                    title: path.clone(),
+                    kind: "topic".to_string()
                 });
 
-                for child in iter {
-                    nodes.insert(Node {
-                        id: child.to_string(),
-                        title: None,
-                        group: 2
-                    });
-
-                    // Create topic hierarchy link: "compiler" → "warnings"
+                // Create topic hierarchy link (parent → child)
+                if let Some(parent_id) = parent {
                     links.insert(Link {
-                        source: parent.to_string(),
-                        target: child.to_string(),
-                        value: 1,
+                        source: parent_id.clone(),
+                        target: path.clone(),
+                        value: 5,
                     });
-
-                    parent = child;
                 }
 
-                // Link file to tag
+                parent = Some(path.clone());
+            }
+
+            // Link file to the **full topic path**
+            if let Some(topic_id) = parent {
                 links.insert(Link {
                     source: file.file_path.clone(),
-                    target: parent.to_string().clone(),
-                    value: 1,
+                    target: topic_id,
+                    value: 2,
                 });
             }
         }
