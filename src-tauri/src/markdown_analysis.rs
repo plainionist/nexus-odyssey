@@ -37,7 +37,6 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
     let mut nodes = HashSet::new();
     let mut links = HashSet::new();
 
-    // Add file nodes
     for file in &metadata_list {
         nodes.insert(Node {
             id: file.file_path.clone(),
@@ -45,7 +44,6 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
             kind: "file".to_string()
         });
 
-        // Process tags
         for tag in &file.tags {
             let parts: Vec<&str> = tag.split('/').collect();
             let mut path = String::new();
@@ -63,7 +61,6 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
                     kind: "topic".to_string()
                 });
 
-                // Create topic hierarchy link (parent → child)
                 if let Some(parent_id) = parent {
                     links.insert(Link {
                         source: parent_id.clone(),
@@ -75,7 +72,6 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
                 parent = Some(path.clone());
             }
 
-            // Link file to the **full topic path**
             if let Some(topic_id) = parent {
                 links.insert(Link {
                     source: file.file_path.clone(),
@@ -144,7 +140,7 @@ pub fn analyze(dir: &Path) -> io::Result<String> {
     scan_markdown_files(dir).map(|result| {
         let graph_json = build_graph(result);
         let json = serde_json::to_string_pretty(&graph_json).unwrap();
-        println!("Analysis complete:\n{}", json);
+        println!("Analysis complete:\n");
         json
     })
 }

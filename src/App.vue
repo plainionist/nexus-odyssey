@@ -9,6 +9,7 @@
   import { listen } from '@tauri-apps/api/event'
   import ForceGraph3D, { ForceGraph3DInstance, Graph, GraphLink, GraphNode } from '3d-force-graph'
   import { useHighlight } from './composables/useHighlight'
+  import SpriteText from 'three-spritetext'
 
   const canvas = ref<HTMLElement | null>(null)
 
@@ -29,23 +30,12 @@
     node.fz = node.z
   }
 
-  function getColorOfKind(kind: string): string {
-    switch (kind) {
+  function getNodeColor(node:GraphNode): string {
+    switch (node.kind) {
       case 'file':
-        return 'rgba(0,0,200,1)'
+        return 'darkblue'
       case 'topic':
-        return 'rgba(0,200,0,1)'
-      default:
-        return 'rgba(255,255,255,0.6)'
-    }
-  }
-
-  function getHighlightedColor(kind: string): string {
-    switch (kind) {
-      case 'file':
-        return 'rgba(50, 180, 255,1)'
-      case 'topic':
-        return 'rgba(50, 255, 120,1)'
+        return 'green'
       default:
         return 'rgba(255,255,255,0.6)'
     }
@@ -56,23 +46,46 @@
 
     const { addNeighbors, highlightNode, highlightLink, isHighlighted, isHovered } = useHighlight(presentation)
 
-    function getNodeColor(node: GraphNode): string {
-      return isHighlighted(node) ? (isHovered(node) ? 'rgb(255,0,0,1)' : getHighlightedColor(node.kind)) : getColorOfKind(node.kind)
+    function getBorderColor(node: GraphNode): string {
+      return isHighlighted(node) ? (isHovered(node) ? 'red' : 'orange') : 'darkgray'
     }
 
+    const nodeObjects = new Map<GraphNode, SpriteText>()
+
     presentation
-      .nodeLabel('title')
-      .nodeColor((node) => getNodeColor(node))
-      .linkWidth((link) => (isHighlighted(link) ? 4 : 1))
+      .nodeLabel('id')
+      .linkWidth((link) => (isHighlighted(link) ? 4 : 3))
       .linkDirectionalParticles((link) => (isHighlighted(link) ? 4 : 0))
       .linkDirectionalParticleWidth(4)
       .showNavInfo(false)
-      .linkDirectionalArrowLength(3.5)
-      .linkDirectionalArrowRelPos(1)
+      // .linkDirectionalArrowLength(3.5)
+      // .linkDirectionalArrowRelPos(1)
       .onNodeClick((node: GraphNode) => lookAt(presentation, node))
       .onNodeDragEnd((node: GraphNode) => fixNodePosition(node))
-      .onNodeHover((node?: GraphNode, _?: GraphNode) => highlightNode(node))
+      .onNodeHover((node?: GraphNode) => {
+        highlightNode(node)
+        
+        nodeObjects.forEach((obj, n) => {
+          obj.borderColor = getBorderColor(n)
+        })
+      })
       .onLinkHover((link?: GraphLink, _?: GraphLink) => highlightLink(link))
+      .nodeThreeObject((node: GraphNode) => {
+        const sprite = new SpriteText(node.title)
+        sprite.color = 'white'
+        sprite.backgroundColor = getNodeColor(node)
+        sprite.textHeight = 8
+        sprite.padding = 4
+        sprite.borderRadius = 4
+        sprite.fontFace = 'Arial'
+        sprite.borderWidth = 1
+        sprite.borderColor = getBorderColor(node)
+        nodeObjects.set(node, sprite)
+        return sprite
+      })
+
+    // Spread nodes a little wider
+    presentation.d3Force('charge').strength(-120)
 
     window.addEventListener('resize', () => {
       presentation.width(canvas.value!.clientWidth)
@@ -93,7 +106,7 @@
       WenQuanYi Micro Hei, sans-serif;
     font-size: 15px;
 
-    color: #0f0f0f;
+    color: #1e1e1e;
     background-color: #f6f6f6;
 
     font-synthesis: none;
@@ -128,7 +141,7 @@
   @media (prefers-color-scheme: dark) {
     :root {
       color: #f6f6f6;
-      background-color: #2f2f2f;
+      background-color: #1e1e1e;
     }
   }
 </style>

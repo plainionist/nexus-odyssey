@@ -23,6 +23,9 @@ importers:
       '@tauri-apps/plugin-opener':
         specifier: ^2
         version: 2.2.5
+      three-spritetext:
+        specifier: ^1.9.4
+        version: 1.9.4(three@0.173.0)
       vue:
         specifier: ^3.5.13
         version: 3.5.13(typescript@5.6.3)
@@ -645,6 +648,12 @@ packages:
     peerDependencies:
       three: '>=0.168'
 
+  three-spritetext@1.9.4:
+    resolution: {integrity: sha512-X9zmfug+61a6laf8RxlS3gA/oA1bNt1A2PB7MRwpgdFD2D5N4QMNNZqSiDirWgyhVaOgQLqM0aUfi+ABhQCfgQ==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      three: '>=0.86.0'
+
   three@0.173.0:
     resolution: {integrity: sha512-AUwVmViIEUgBwxJJ7stnF0NkPpZxx1aZ6WiAbQ/Qq61h6I9UR4grXtZDmO8mnlaNORhHnIBlXJ1uBxILEKuVyw==}
 
@@ -1240,6 +1249,10 @@ snapshots:
       float-tooltip: 1.7.3
       kapsule: 1.16.0
       polished: 4.3.1
+      three: 0.173.0
+
+  three-spritetext@1.9.4(three@0.173.0):
+    dependencies:
       three: 0.173.0
 
   three@0.173.0: {}
