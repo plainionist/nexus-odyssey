@@ -82,7 +82,7 @@ pub fn run() {
                                     }
 
                                     // store as kind of cache
-                                    let cache_file = path.join("analysis.json");
+                                    let cache_file = path.join("nexus-odyssey-cache.json");
                                     if let Err(err) = std::fs::write(cache_file, &content) {
                                         eprintln!("Failed to write cache file: {}", err);
                                     }

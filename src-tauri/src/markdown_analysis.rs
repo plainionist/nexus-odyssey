@@ -139,7 +139,7 @@ pub fn analyze(dir: &Path) -> io::Result<String> {
     scan_markdown_files(dir).map(|result| {
         let graph_json = build_graph(result);
         let json = serde_json::to_string_pretty(&graph_json).unwrap();
-        println!("Analysis complete:\n");
+        println!("Analysis complete!");
         json
     })
 }
