@@ -38,6 +38,7 @@ struct Link {
 fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
     let mut nodes = HashSet::new();
     let mut links = HashSet::new();
+    let mut tags = HashSet::new();
 
     for file in &metadata_list {
         nodes.insert(Node {
@@ -47,40 +48,42 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
         });
 
         for tag in &file.tags {
-            let parts: Vec<&str> = tag.split('/').collect();
-            let mut path = String::new();
-            let mut parent: Option<String> = None;
+            links.insert(Link {
+                source: file.file_path.clone(),
+                target: tag.clone(),
+                value: 2,
+            });
 
-            for part in parts {
-                if !path.is_empty() {
-                    path.push('/');
-                }
-                path.push_str(part);
+            tags.insert(tag);
+        }
+    }
 
-                nodes.insert(Node {
-                    id: path.clone(),
-                    title: part.to_string().clone(),
-                    kind: "topic".to_string(),
-                });
+    for tag in &tags {
+        let parts: Vec<&str> = tag.split('/').collect();
+        let mut path = String::new();
+        let mut parent: Option<String> = None;
 
-                if let Some(parent_id) = parent {
-                    links.insert(Link {
-                        source: parent_id.clone(),
-                        target: path.clone(),
-                        value: 5,
-                    });
-                }
-
-                parent = Some(path.clone());
+        for part in parts {
+            if !path.is_empty() {
+                path.push('/');
             }
+            path.push_str(part);
 
-            if let Some(topic_id) = parent {
+            nodes.insert(Node {
+                id: path.clone(),
+                title: part.to_string().clone(),
+                kind: "topic".to_string(),
+            });
+
+            if let Some(parent_id) = parent {
                 links.insert(Link {
-                    source: file.file_path.clone(),
-                    target: topic_id,
-                    value: 2,
+                    source: parent_id.clone(),
+                    target: path.clone(),
+                    value: 5,
                 });
             }
+
+            parent = Some(path.clone());
         }
     }
 
