@@ -1,7 +1,7 @@
 use gray_matter::engine::YAML;
 use gray_matter::Matter;
 use serde_json::json;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -36,103 +36,51 @@ struct Link {
     value: i32,
 }
 
-/// Resolves all relative tags to their absolute versions based on known overlaps
-fn resolve_tag_paths(tags: &HashSet<String>) -> HashMap<String, String> {
-    let mut resolved_tags = HashMap::new();
-
-    // Step 1: Sort tags by length to ensure longest known paths are processed first
-    let mut sorted_tags: Vec<&String> = tags.iter().collect();
-    sorted_tags.sort_by_key(|t| t.len());
-
-    for tag in &sorted_tags {
-        let tag_parts: Vec<&str> = tag.split('/').filter(|s| !s.is_empty()).collect();
-        let mut best_match = None;
-        let mut best_match_path = String::new();
-
-        // Step 2: Find the longest existing absolute prefix
-        for i in 1..=tag_parts.len() {
-            let potential_path = format!("/{}", tag_parts[..i].join("/"));
-
-            if resolved_tags.contains_key(&potential_path) {
-                best_match = Some(potential_path.clone());
-            }
-        }
-
-        // Step 3: If we found a valid prefix, extend it
-        if let Some(prefix) = best_match {
-            best_match_path = prefix;
-            if !best_match_path.ends_with('/') {
-                best_match_path.push('/');
-            }
-        }
-
-        // Step 4: Store the resolved absolute path
-        let final_path = format!("{}{}", best_match_path, tag_parts.join("/"));
-        resolved_tags.insert(tag.to_string(), final_path);
-    }
-
-    resolved_tags
-}
-
 fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
     let mut nodes = HashSet::new();
     let mut links = HashSet::new();
-    let mut tags = HashSet::new();
 
     for file in &metadata_list {
-        // we want the tags also from "to be ignored files" - those are "meta files"
-        for tag in &file.tags {
-            tags.insert(tag.clone());
-        }
-
-        if file.ignore {
-            continue;
-        }
-
-        nodes.insert(Node {
-            id: file.file_path.clone(),
-            title: file.title.clone(),
-            kind: "file".to_string(),
-        });
-
-        for tag in &file.tags {
-            links.insert(Link {
-                source: file.file_path.clone(),
-                target: tag.clone(),
-                value: 2,
-            });
-        }
-    }
-
-    let resolved = resolve_tag_paths(&tags);
-    println!("Resolved tags: {:?}", resolved);
-
-    for tag in &tags {
-        let parts: Vec<&str> = tag.split('/').collect();
-        let mut path = String::new();
-        let mut parent: Option<String> = None;
-
-        for part in parts {
-            if !path.is_empty() {
-                path.push('/');
-            }
-            path.push_str(part);
-
+        if !file.ignore {
             nodes.insert(Node {
-                id: path.clone(),
-                title: part.to_string().clone(),
-                kind: "topic".to_string(),
+                id: file.file_path.clone(),
+                title: file.title.clone(),
+                kind: "file".to_string(),
             });
+        }
 
-            if let Some(parent_id) = parent {
-                links.insert(Link {
-                    source: parent_id.clone(),
-                    target: path.clone(),
-                    value: 5,
+        for tag in &file.tags {
+            let parts: Vec<&str> = tag.split('/').collect();
+            let mut parent: Option<String> = None;
+
+            for part in parts {
+                nodes.insert(Node {
+                    id: part.to_string(),
+                    title: part.to_string(),
+                    kind: "topic".to_string(),
                 });
+
+                if let Some(parent_id) = parent {
+                    links.insert(Link {
+                        source: parent_id.clone(),
+                        target: part.to_string(),
+                        value: 5,
+                    });
+                }
+
+                parent = Some(part.to_string());
             }
 
-            parent = Some(path.clone());
+            if !file.ignore {
+                // parent is now the last part of the tag
+                if let Some(last_part) = parent {
+                    links.insert(Link {
+                        source: file.file_path.clone(),
+                        target: last_part.to_string(),
+                        value: 10,
+                    });
+                }
+            }
         }
     }
 
