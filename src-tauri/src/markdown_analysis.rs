@@ -90,55 +90,59 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
     })
 }
 
-// TODO: tags contain relative paths - first build entire tree of topics
 fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
     let mut metadata_list = Vec::new();
 
+    if !dir.is_dir() {
+        return Ok(metadata_list);
+    }
+
     let matter = Matter::<YAML>::new();
 
-    if dir.is_dir() {
-        for entry in fs::read_dir(dir)? {
-            if metadata_list.len() >= 50 {
-                break;
-            }
-
-            let entry = entry?;
-            let path = entry.path();
-
-            if path.is_dir() {
-                let nested_files = scan_markdown_files(&path)?;
-                metadata_list.extend(nested_files);
-            } else if path.extension().map_or(false, |ext| ext == "md") {
-                if let Ok(contents) = fs::read_to_string(&path) {
-                    let result = matter.parse(&contents);
-                    let front_matter: FrontMatter = result.data.and_then(|x| x.deserialize().ok()).unwrap_or_default();
-
-                    if front_matter.ignore {
-                        continue;
-                    }
-
-                    let file_name = path
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("Unnamed")
-                        .to_string();
-
-                    metadata_list.push(MarkdownMeta {
-                        title: front_matter.title.unwrap_or_else(|| file_name),
-                        file_path: path.to_string_lossy().to_string(),
-                        tags: front_matter
-                            .tags
-                            .map(|tags| {
-                                tags.split(' ')
-                                    .map(|s| s.trim().to_string())
-                                    .filter(|x| !x.is_empty())
-                                    .collect()
-                            })
-                            .unwrap_or_else(Vec::new),
-                    });
-                }
-            }
+    for entry in fs::read_dir(dir)? {
+        if metadata_list.len() >= 50 {
+            break;
         }
+
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            metadata_list.extend(scan_markdown_files(&path)?);
+            continue;
+        }
+
+        if path.extension().map_or(false, |ext| ext != "md") {
+            continue;
+        }
+
+        let contents = fs::read_to_string(&path)?;
+        let result = matter.parse(&contents);
+        let front_matter: FrontMatter = result.data.and_then(|x| x.deserialize().ok()).unwrap_or_default();
+
+        if front_matter.ignore {
+            continue;
+        }
+
+        let file_name = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Unnamed")
+            .to_string();
+
+        metadata_list.push(MarkdownMeta {
+            title: front_matter.title.unwrap_or_else(|| file_name),
+            file_path: path.to_string_lossy().to_string(),
+            tags: front_matter
+                .tags
+                .map(|tags| {
+                    tags.split(' ')
+                        .map(|s| s.trim().to_string())
+                        .filter(|x| !x.is_empty())
+                        .collect()
+                })
+                .unwrap_or_else(Vec::new),
+        });
     }
 
     Ok(metadata_list)
