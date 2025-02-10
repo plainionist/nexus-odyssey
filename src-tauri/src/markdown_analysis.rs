@@ -90,6 +90,25 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
     })
 }
 
+fn parse_tags(tags: Option<String>) -> Vec<String> {
+    tags.map(|tags| {
+        tags.split(' ')
+            .map(|s| s.trim().to_lowercase().to_string())
+            .filter(|x| !x.is_empty())
+            .collect()
+    })
+    .unwrap_or_else(Vec::new)
+}
+
+fn create_title(path: &Path, front_matter_title: Option<String>) -> String {
+    front_matter_title.unwrap_or_else(|| {
+        path.file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unnamed>")
+            .to_string()
+    })
+}
+
 fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
     let mut metadata_list = Vec::new();
 
@@ -124,24 +143,10 @@ fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
             continue;
         }
 
-        let file_name = path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("Unnamed")
-            .to_string();
-
         metadata_list.push(MarkdownMeta {
-            title: front_matter.title.unwrap_or_else(|| file_name),
+            title: create_title(&path, front_matter.title),
             file_path: path.to_string_lossy().to_string(),
-            tags: front_matter
-                .tags
-                .map(|tags| {
-                    tags.split(' ')
-                        .map(|s| s.trim().to_string())
-                        .filter(|x| !x.is_empty())
-                        .collect()
-                })
-                .unwrap_or_else(Vec::new),
+            tags: parse_tags(front_matter.tags),
         });
     }
 
