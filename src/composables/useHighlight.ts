@@ -64,10 +64,10 @@ export function useHighlight(self: ForceGraph3DInstance) {
     return item === hoverNode
   }
 
-  function isHighlighted(item: GraphLink | GraphNode) {
-    const node = item as GraphNode
-    if (node.id !== undefined) return highlightNodes.has(node)
-    else highlightLinks.has(item as GraphLink)
+  function isHighlighted(item: GraphLink | GraphNode): boolean {
+    const link = item as GraphLink
+    if ('source' in item) return highlightLinks.has(link)
+    return highlightNodes.has(item as GraphNode)
   }
 
   return {

@@ -59,7 +59,7 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
 
                 nodes.insert(Node {
                     id: path.clone(),
-                    title: path.clone(),
+                    title: part.to_string().clone(),
                     kind: "topic".to_string()
                 });
 

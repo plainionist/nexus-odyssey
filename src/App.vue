@@ -29,17 +29,40 @@
     node.fz = node.z
   }
 
+  function getColorOfKind(kind: string): string {
+    switch (kind) {
+      case 'file':
+        return 'rgba(0,0,200,1)'
+      case 'topic':
+        return 'rgba(0,200,0,1)'
+      default:
+        return 'rgba(255,255,255,0.6)'
+    }
+  }
+
+  function getHighlightedColor(kind: string): string {
+    switch (kind) {
+      case 'file':
+        return 'rgba(50, 180, 255,1)'
+      case 'topic':
+        return 'rgba(50, 255, 120,1)'
+      default:
+        return 'rgba(255,255,255,0.6)'
+    }
+  }
+
   onMounted(async () => {
     const presentation = new ForceGraph3D(document.getElementById('canvas')!)
 
     const { addNeighbors, highlightNode, highlightLink, isHighlighted, isHovered } = useHighlight(presentation)
 
-    const HOVER_COLOR = 'rgb(255,0,0,1)'
-    const HIGHLIGHT_COLOR = 'rgba(255,160,0,0.8)'
+    function getNodeColor(node: GraphNode): string {
+      return isHighlighted(node) ? (isHovered(node) ? 'rgb(255,0,0,1)' : getHighlightedColor(node.kind)) : getColorOfKind(node.kind)
+    }
 
     presentation
       .nodeLabel('title')
-      .nodeColor((node) => isHighlighted(node) ? (isHovered(node) ? HOVER_COLOR : HIGHLIGHT_COLOR) : 'rgba(0,255,255,0.6)')
+      .nodeColor((node) => getNodeColor(node))
       .linkWidth((link) => (isHighlighted(link) ? 4 : 1))
       .linkDirectionalParticles((link) => (isHighlighted(link) ? 4 : 0))
       .linkDirectionalParticleWidth(4)
