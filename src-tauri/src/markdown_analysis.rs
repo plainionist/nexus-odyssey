@@ -85,7 +85,7 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
             tags.insert(tag.clone());
         }
 
-        if !file.ignore {
+        if file.ignore {
             continue;
         }
 
@@ -196,15 +196,12 @@ fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
         let result = matter.parse(&contents);
         let front_matter: FrontMatter = result.data.and_then(|x| x.deserialize().ok()).unwrap_or_default();
 
-        let meta = MarkdownMeta {
+        metadata_list.push(MarkdownMeta {
             title: create_title(&path, front_matter.title),
             file_path: path.to_string_lossy().to_string(),
             tags: extract_tags(&front_matter.tags),
             ignore: front_matter.ignore,
-        };
-        println!("Meta: {:?}", meta);
-
-        metadata_list.push(meta);
+        });
     }
 
     Ok(metadata_list)
