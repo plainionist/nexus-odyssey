@@ -1,5 +1,6 @@
 <template>
   <main class="container">
+    <input type="text" v-model="searchQuery" @keyup.enter="searchNode" placeholder="Search ..." />
     <div ref="canvas" id="canvas"></div>
   </main>
 </template>
@@ -13,10 +14,22 @@
   import { invoke } from '@tauri-apps/api/core'
 
   const canvas = ref<HTMLElement | null>(null)
+  const searchQuery = ref('')
+  const presentation = ref<ForceGraph3DInstance | null>(null)
+
+  function searchNode() {
+    const node = presentation.value!.graphData().nodes.find((n: GraphNode) => n.title.includes(searchQuery.value))
+
+    if (node) {
+      lookAt(presentation.value!, node)
+    } else {
+      console.warn('Node not found!')
+    }
+  }
 
   function lookAt(presentation: ForceGraph3DInstance, node: GraphNode) {
     // Aim at node from outside it
-    const distance = 70
+    const distance = 170
     const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z)
 
     const newPos =
@@ -53,9 +66,9 @@
   }
 
   onMounted(async () => {
-    const presentation = new ForceGraph3D(document.getElementById('canvas')!)
+    presentation.value = new ForceGraph3D(document.getElementById('canvas')!)
 
-    const { addNeighbors, highlightNode, highlightLink, isHighlighted, isHovered } = useHighlight(presentation)
+    const { addNeighbors, highlightNode, highlightLink, isHighlighted, isHovered } = useHighlight(presentation.value!)
 
     function getBorderColor(node: GraphNode): string {
       return isHighlighted(node) ? (isHovered(node) ? 'red' : 'orange') : 'darkgray'
@@ -63,7 +76,7 @@
 
     const nodeObjects = new Map<GraphNode, SpriteText>()
 
-    presentation
+    presentation.value
       .nodeLabel('id')
       .linkWidth((link) => (isHighlighted(link) ? 4 : 3))
       .linkDirectionalParticles((link) => (isHighlighted(link) ? 4 : 0))
@@ -71,7 +84,7 @@
       .showNavInfo(false)
       // .linkDirectionalArrowLength(3.5)
       // .linkDirectionalArrowRelPos(1)
-      .onNodeClick((node: GraphNode) => lookAt(presentation, node))
+      .onNodeClick((node: GraphNode) => lookAt(presentation.value!, node))
       .onNodeDragEnd((node: GraphNode) => fixNodePosition(node))
       .onNodeHover((node?: GraphNode) => {
         highlightNode(node)
@@ -105,17 +118,17 @@
       })
 
     // Spread nodes a little wider
-    presentation.d3Force('charge').strength(-120)
+    presentation.value.d3Force('charge').strength(-120)
 
     window.addEventListener('resize', () => {
-      presentation.width(canvas.value!.clientWidth)
-      presentation.height(canvas.value!.clientHeight)
+      presentation.value!.width(canvas.value!.clientWidth)
+      presentation.value!.height(canvas.value!.clientHeight)
     })
 
     listen<string>('load:json', (event) => {
       const graph = JSON.parse(event.payload) as Graph
       addNeighbors(graph)
-      presentation.graphData(graph)
+      presentation.value!.graphData(graph)
     })
   })
 </script>
@@ -147,12 +160,24 @@
 
   .container {
     margin: 0;
-    width: 100%;
-    height: 100%;
     display: flex;
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    width: 100%;
+    height: 100vh; /* Full screen height */
+  }
+
+  input {
+    padding: 10px;
+    font-size: 16px;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    padding: 4px;
   }
 
   #canvas {
+    flex-grow: 1; /* Takes up remaining space */
     width: 100%;
     height: 100%;
     display: block;

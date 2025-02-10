@@ -26,6 +26,8 @@ declare module '3d-force-graph' {
   export interface ForceGraph3DInstance {
     new (element: HTMLElement): ForceGraph3DInstance // Constructor accepting an HTMLElement
 
+    nodes : GraphNode[]
+    links : GraphLink[]
     graphData(data?: Graph): ForceGraph3DInstance
 
     width(value: Number): ForceGraph3DInstance
