@@ -30,7 +30,7 @@
     node.fz = node.z
   }
 
-  function getNodeColor(node:GraphNode): string {
+  function getNodeColor(node: GraphNode): string {
     switch (node.kind) {
       case 'file':
         return 'darkblue'
@@ -39,6 +39,12 @@
       default:
         return 'rgba(255,255,255,0.6)'
     }
+  }
+
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text).catch((err) => {
+      console.error('Failed to copy text', err)
+    })
   }
 
   onMounted(async () => {
@@ -64,7 +70,7 @@
       .onNodeDragEnd((node: GraphNode) => fixNodePosition(node))
       .onNodeHover((node?: GraphNode) => {
         highlightNode(node)
-        
+
         nodeObjects.forEach((obj, n) => {
           obj.borderColor = getBorderColor(n)
         })
@@ -82,6 +88,11 @@
         sprite.borderColor = getBorderColor(node)
         nodeObjects.set(node, sprite)
         return sprite
+      })
+      .onNodeRightClick((node: GraphNode, event: MouseEvent) => {
+        if (node && event?.ctrlKey) {
+          copyToClipboard(node.id.toString())
+        }
       })
 
     // Spread nodes a little wider

@@ -64,6 +64,7 @@ declare module '3d-force-graph' {
     showNavInfo(show: boolean): ForceGraph3DInstance
 
     onNodeClick(callback: (node: GraphNode, event: MouseEvent) => void): ForceGraph3DInstance
+    onNodeRightClick(callback: (node: GraphNode, event: MouseEvent) => void): ForceGraph3DInstance
     onNodeHover(callback: (node?: GraphNode, prevNode?: GraphNode) => void): ForceGraph3DInstance
     onNodeDragEnd(callback: (link: GraphNode, translate: Point3d) => void): ForceGraph3DInstance
     onLinkClick(callback: (link: GraphLink, event: MouseEvent) => void): ForceGraph3DInstance
