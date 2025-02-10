@@ -1,7 +1,6 @@
 mod dot_parser;
 mod markdown_analysis;
 
-use std::env;
 use std::io::{Error, ErrorKind};
 use std::path::Path;
 use std::process::Command;
@@ -21,11 +20,6 @@ fn read_file(path: &Path) -> std::io::Result<String> {
 
 #[command]
 fn open_in_vscode(file_path: String) {
-    // match env::var("PATH") {
-    //     Ok(val) => println!("PATH: {}", val),
-    //     Err(e) => println!("Couldn't read PATH: {}", e),
-    // }
-
     let cmd = if cfg!(target_os = "windows") {
         "code.cmd"
     } else {
@@ -80,16 +74,21 @@ pub fn run() {
                     }
                 } else if event.id() == "analyze-markdown" {
                     if let Some(folder_path) = app.dialog().file().blocking_pick_folder() {
-                        if let Err(err) = folder_path
-                            .as_path()
-                            .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "Invalid folder path"))
-                            .and_then(markdown_analysis::analyze)
-                            .and_then(|content| {
-                                app.emit("load:json", content)
-                                    .map_err(|e| Error::new(ErrorKind::Other, e))
-                            })
-                        {
-                            eprintln!("Failed to read and emit JSON file: {}", err);
+                        if let Some(path) = folder_path.as_path() {
+                            match markdown_analysis::analyze(path) {
+                                Ok(content) => {
+                                    if let Err(err) = app.emit("load:json", &content) {
+                                        eprintln!("Failed to emit json: {}", err);
+                                    }
+
+                                    // store as kind of cache
+                                    let cache_file = path.join("analysis.json");
+                                    if let Err(err) = std::fs::write(cache_file, &content) {
+                                        eprintln!("Failed to write cache file: {}", err);
+                                    }
+                                }
+                                Err(err) => eprintln!("Failed to analyze folder: {}", err),
+                            }
                         }
                     }
                 }
