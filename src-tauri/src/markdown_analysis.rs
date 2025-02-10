@@ -51,9 +51,9 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
 
         for tag in &file.tags {
             let parts: Vec<&str> = tag.split('/').collect();
-            let mut parent: Option<String> = None;
+            let mut parent: Option<&str> = None;
 
-            for part in parts {
+            for &part in &parts {
                 nodes.insert(Node {
                     id: part.to_string(),
                     title: part.to_string(),
@@ -62,13 +62,13 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
 
                 if let Some(parent_id) = parent {
                     links.insert(Link {
-                        source: parent_id.clone(),
+                        source: parent_id.to_string(),
                         target: part.to_string(),
                         value: 5,
                     });
                 }
 
-                parent = Some(part.to_string());
+                parent = Some(part);
             }
 
             if !file.ignore {
