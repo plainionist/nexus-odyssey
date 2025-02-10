@@ -10,6 +10,7 @@
   import ForceGraph3D, { ForceGraph3DInstance, Graph, GraphLink, GraphNode } from '3d-force-graph'
   import { useHighlight } from './composables/useHighlight'
   import SpriteText from 'three-spritetext'
+  import { invoke } from '@tauri-apps/api/core'
 
   const canvas = ref<HTMLElement | null>(null)
 
@@ -45,6 +46,10 @@
     navigator.clipboard.writeText(text).catch((err) => {
       console.error('Failed to copy text', err)
     })
+  }
+
+  function openFileInVSCode(filePath: string) {
+    invoke('open_in_vscode', { filePath }).catch(console.error)
   }
 
   onMounted(async () => {
@@ -90,7 +95,11 @@
         return sprite
       })
       .onNodeRightClick((node: GraphNode, event: MouseEvent) => {
-        if (node && event?.ctrlKey) {
+        if (!node || !event) return
+
+        if (node.kind === 'file' && event.ctrlKey && event.shiftKey) {
+          openFileInVSCode(node.id.toString())
+        } else if (event.ctrlKey) {
           copyToClipboard(node.id.toString())
         }
       })

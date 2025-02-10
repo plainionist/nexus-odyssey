@@ -108,7 +108,6 @@ fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
             } else if path.extension().map_or(false, |ext| ext == "md") {
                 if let Ok(contents) = fs::read_to_string(&path) {
                     let result = matter.parse(&contents);
-                    println!("Parsed front matter: {:?}", result.data);
                     let front_matter: Option<FrontMatter> = result.data.and_then(|x| x.deserialize().ok());
 
                     let file_name = path

@@ -1,8 +1,11 @@
 mod dot_parser;
 mod markdown_analysis;
 
+use std::env;
 use std::io::{Error, ErrorKind};
 use std::path::Path;
+use std::process::Command;
+use tauri::command;
 use tauri::menu::*;
 use tauri::Emitter;
 use tauri::Manager;
@@ -16,12 +19,33 @@ fn read_file(path: &Path) -> std::io::Result<String> {
     }
 }
 
+#[command]
+fn open_in_vscode(file_path: String) {
+    // match env::var("PATH") {
+    //     Ok(val) => println!("PATH: {}", val),
+    //     Err(e) => println!("Couldn't read PATH: {}", e),
+    // }
+
+    let cmd = if cfg!(target_os = "windows") {
+        "code.cmd"
+    } else {
+        "code"
+    };
+    let output = Command::new(cmd).arg(file_path.clone()).spawn();
+
+    match output {
+        Ok(_) => println!("Opened file in VS Code: {}", file_path),
+        Err(e) => println!("Failed to open file in VS Code: {}", e),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![open_in_vscode])
         .setup(|app| {
             let file_menu = SubmenuBuilder::new(app, "File")
                 .text("open", "Open ...")
@@ -54,13 +78,8 @@ pub fn run() {
                             eprintln!("Failed to read and emit JSON file: {}", err);
                         }
                     }
-                }
-                else if event.id() == "analyze-markdown" {
-                    if let Some(folder_path) = app
-                        .dialog()
-                        .file()
-                        .blocking_pick_folder()
-                    {
+                } else if event.id() == "analyze-markdown" {
+                    if let Some(folder_path) = app.dialog().file().blocking_pick_folder() {
                         if let Err(err) = folder_path
                             .as_path()
                             .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "Invalid folder path"))
