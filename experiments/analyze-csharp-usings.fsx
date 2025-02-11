@@ -23,6 +23,10 @@ let extractUsingsAndNamespace (filePath: string) =
     
     namespaceDecl, usings
 
+let extractGroup (namespaceName: string) =
+    let parts = namespaceName.Split('.')
+    if parts.Length > 1 then parts.[1] else "Default"
+
 let buildDependencyGraph (folder: string) =
     let files = Directory.GetFiles(folder, "*.cs", SearchOption.AllDirectories)
 
@@ -40,7 +44,7 @@ let buildDependencyGraph (folder: string) =
 let generateJson (declaredNamespaces: Set<string>) (dependencies: Map<string, Set<string>>) =
     let nodes =
         declaredNamespaces
-        |> Seq.map(fun ns -> {| id = ns; group = 1 |})
+        |> Seq.map(fun ns -> {| id = ns; group = extractGroup ns |})
         |> Seq.toList
     
     let links =
