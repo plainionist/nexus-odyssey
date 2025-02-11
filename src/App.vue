@@ -1,6 +1,6 @@
 <template>
   <main class="container">
-    <input type="text" v-model="searchQuery" @keyup.enter="searchNode" placeholder="Search ..." />
+    <input v-if="showSearch" type="text" v-model="searchQuery" @keyup.enter="searchNode" placeholder="Search ..." />
     <div ref="canvas" id="canvas"></div>
   </main>
 </template>
@@ -14,6 +14,7 @@
   import { invoke } from '@tauri-apps/api/core'
 
   const canvas = ref<HTMLElement | null>(null)
+  const showSearch = ref(true)
   const searchQuery = ref('')
   const presentation = ref<ForceGraph3DInstance | null>(null)
 
@@ -78,6 +79,7 @@
 
     presentation.value
       .nodeLabel('id')
+      //.nodeAutoColorBy('group')
       .linkWidth((link: GraphLink) => (isHighlighted(link) ? 4 : 3))
       .linkDirectionalParticles((link: GraphLink) => (isHighlighted(link) ? 4 : 0))
       .linkDirectionalParticleWidth(4)

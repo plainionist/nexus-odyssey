@@ -13,14 +13,13 @@ struct SerializableGraph {
 #[derive(Serialize, Deserialize)]
 struct Node {
     id: String,
-    group: i32, // Defaulting to `i32`, adjust if needed
+    group: i32, // TODO: use for subgraphs
 }
 
 #[derive(Serialize, Deserialize)]
 struct Link {
     source: String,
     target: String,
-    value: i32, // Represents edge weight
 }
 
 fn parse(path: &Path) -> Result<String, Box<dyn std::error::Error>> {
@@ -44,7 +43,6 @@ fn parse(path: &Path) -> Result<String, Box<dyn std::error::Error>> {
       .map(|edge| Link {
           source: edge.from.clone(),
           target: edge.to.clone(),
-          value: 1,
       })
       .collect();
 

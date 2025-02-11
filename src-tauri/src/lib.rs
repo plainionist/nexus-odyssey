@@ -43,12 +43,15 @@ pub fn run() {
         .setup(|app| {
             let file_menu = SubmenuBuilder::new(app, "File")
                 .text("open", "Open ...")
-                .text("analyze-markdown", "Analyze MarkDown ...")
                 .separator()
                 .quit()
                 .build()?;
 
-            let menu = MenuBuilder::new(app).item(&file_menu).build()?;
+            let tools_menu = SubmenuBuilder::new(app, "Tools")
+                .text("analyze-markdown", "Analyze MarkDown ...")
+                .build()?;
+
+            let menu = MenuBuilder::new(app).item(&file_menu).item(&tools_menu).build()?;
 
             app.set_menu(menu)?;
 
