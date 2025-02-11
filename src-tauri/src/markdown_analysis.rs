@@ -82,6 +82,9 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
     }
 
     json!({
+        "meta": {
+            "semantics": "markdown",
+        },
         "nodes": nodes.into_iter().collect::<Vec<_>>(),
         "links": links.into_iter().collect::<Vec<_>>()
     })

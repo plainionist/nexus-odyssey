@@ -1,6 +1,7 @@
 import { ForceGraph3DInstance, Graph, GraphLink, GraphNode } from '3d-force-graph'
+import { Ref } from 'vue'
 
-export function useHighlight(self: ForceGraph3DInstance) {
+export function useHighlight(self: Ref<ForceGraph3DInstance | null>) {
   const highlightNodes = new Set()
   const highlightLinks = new Set()
   let hoverNode: GraphNode | null = null
@@ -26,7 +27,10 @@ export function useHighlight(self: ForceGraph3DInstance) {
 
   function updateHighlight() {
     // trigger update of highlighted objects in scene
-    self.nodeColor(self.nodeColor()).linkWidth(self.linkWidth()).linkDirectionalParticles(self.linkDirectionalParticles())
+    self
+      .value!.nodeColor(self.value!.nodeColor())
+      .linkWidth(self.value!.linkWidth())
+      .linkDirectionalParticles(self.value!.linkDirectionalParticles())
   }
 
   function highlightNode(node?: GraphNode) {

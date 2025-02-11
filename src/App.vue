@@ -1,6 +1,6 @@
 <template>
   <main class="container">
-    <input v-if="showSearch" type="text" v-model="searchQuery" @keyup.enter="searchNode" placeholder="Search ..." />
+    <input v-if="mode === 'markdown'" type="text" v-model="searchQuery" @keyup.enter="searchNode" placeholder="Search ..." />
     <div ref="canvas" id="canvas"></div>
   </main>
 </template>
@@ -14,9 +14,11 @@
   import { invoke } from '@tauri-apps/api/core'
 
   const canvas = ref<HTMLElement | null>(null)
-  const showSearch = ref(true)
+  const mode = ref('')
   const searchQuery = ref('')
   const presentation = ref<ForceGraph3DInstance | null>(null)
+
+  const { addNeighbors, highlightNode, highlightLink, isHighlighted, isHovered } = useHighlight(presentation)
 
   function searchNode() {
     const node = presentation.value!.graphData().nodes.find((n: GraphNode) => n.title.includes(searchQuery.value))
@@ -66,10 +68,10 @@
     invoke('open_in_vscode', { filePath }).catch(console.error)
   }
 
-  onMounted(async () => {
-    presentation.value = new ForceGraph3D(document.getElementById('canvas')!)
+  function buildPresentation(graph: Graph) {
+    mode.value = graph.meta?.semantics || ''
 
-    const { addNeighbors, highlightNode, highlightLink, isHighlighted, isHovered } = useHighlight(presentation.value!)
+    presentation.value = new ForceGraph3D(document.getElementById('canvas')!)
 
     function getBorderColor(node: GraphNode): string {
       return isHighlighted(node) ? (isHovered(node) ? 'red' : 'orange') : 'darkgray'
@@ -79,8 +81,6 @@
 
     presentation.value
       .nodeLabel('id')
-      //.nodeAutoColorBy('group')
-      .linkWidth((link: GraphLink) => (isHighlighted(link) ? 4 : 3))
       .linkDirectionalParticles((link: GraphLink) => (isHighlighted(link) ? 4 : 0))
       .linkDirectionalParticleWidth(4)
       .showNavInfo(false)
@@ -88,49 +88,67 @@
       // .linkDirectionalArrowRelPos(1)
       .onNodeClick((node: GraphNode) => lookAt(presentation.value!, node))
       .onNodeDragEnd((node: GraphNode) => fixNodePosition(node))
-      .onNodeHover((node?: GraphNode) => {
-        highlightNode(node)
-
-        nodeObjects.forEach((obj, n) => {
-          obj.borderColor = getBorderColor(n)
-        })
-      })
       .onLinkHover((link?: GraphLink, _?: GraphLink) => highlightLink(link))
-      .nodeThreeObject((node: GraphNode) => {
-        const sprite = new SpriteText(node.title)
-        sprite.color = 'white'
-        sprite.backgroundColor = getNodeColor(node)
-        sprite.textHeight = 8
-        sprite.padding = 4
-        sprite.borderRadius = 4
-        sprite.fontFace = 'Arial'
-        sprite.borderWidth = 1
-        sprite.borderColor = getBorderColor(node)
-        nodeObjects.set(node, sprite)
-        return sprite
-      })
-      .onNodeRightClick((node: GraphNode, event: MouseEvent) => {
-        if (!node || !event) return
 
-        if (node.kind === 'file' && event.ctrlKey && event.shiftKey) {
-          openFileInVSCode(node.id.toString())
-        } else if (event.ctrlKey) {
-          copyToClipboard(node.id.toString())
-        }
-      })
+    if (mode.value === 'markdown') {
+      presentation.value
+        .linkWidth((link: GraphLink) => (isHighlighted(link) ? 4 : 3))
+        .onNodeHover((node?: GraphNode) => {
+          highlightNode(node)
 
-    // Spread nodes a little wider
-    presentation.value.d3Force('charge').strength(-120)
+          nodeObjects.forEach((obj, n) => {
+            obj.borderColor = getBorderColor(n)
+          })
+        })
+        .nodeThreeObject((node: GraphNode) => {
+          const sprite = new SpriteText(node.title)
+          sprite.color = 'white'
+          sprite.backgroundColor = getNodeColor(node)
+          sprite.textHeight = 8
+          sprite.padding = 4
+          sprite.borderRadius = 4
+          sprite.fontFace = 'Arial'
+          sprite.borderWidth = 1
+          sprite.borderColor = getBorderColor(node)
+          nodeObjects.set(node, sprite)
+          return sprite
+        })
+        .onNodeRightClick((node: GraphNode, event: MouseEvent) => {
+          if (!node || !event) return
 
-    window.addEventListener('resize', () => {
-      presentation.value!.width(canvas.value!.clientWidth)
-      presentation.value!.height(canvas.value!.clientHeight)
-    })
+          if (node.kind === 'file' && event.ctrlKey && event.shiftKey) {
+            openFileInVSCode(node.id.toString())
+          } else if (event.ctrlKey) {
+            copyToClipboard(node.id.toString())
+          }
+        })
+
+      // Spread nodes a little wider
+      presentation.value.d3Force('charge').strength(-120)
+    } else {
+      presentation.value
+        .linkWidth((link: GraphLink) => (isHighlighted(link) ? 4 : 1))
+        .nodeAutoColorBy('group')
+        .onNodeHover((node?: GraphNode) => highlightNode(node))
+    }
+
+    presentation.value.graphData(graph)
+    setTimeout(requestFullscreen, 1000)
+  }
+
+  function requestFullscreen() {
+    if (presentation.value) {
+      presentation.value.width(canvas.value!.clientWidth)
+      presentation.value.height(canvas.value!.clientHeight)
+    }
+  }
+  onMounted(async () => {
+    window.addEventListener('resize', requestFullscreen)
 
     listen<string>('load:json', (event) => {
       const graph = JSON.parse(event.payload) as Graph
       addNeighbors(graph)
-      presentation.value!.graphData(graph)
+      buildPresentation(graph)
     })
   })
 </script>
@@ -167,6 +185,7 @@
     flex-direction: column; /* Stack items vertically */
     width: 100%;
     height: 100vh; /* Full screen height */
+    background-color: black;
   }
 
   input {
