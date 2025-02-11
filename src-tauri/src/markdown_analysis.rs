@@ -33,7 +33,6 @@ struct Node {
 struct Link {
     source: String,
     target: String,
-    value: i32,
 }
 
 fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
@@ -64,7 +63,6 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
                     links.insert(Link {
                         source: parent_id.to_string(),
                         target: part.to_string(),
-                        value: 5,
                     });
                 }
 
@@ -77,7 +75,6 @@ fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
                     links.insert(Link {
                         source: file.file_path.clone(),
                         target: last_part.to_string(),
-                        value: 10,
                     });
                 }
             }

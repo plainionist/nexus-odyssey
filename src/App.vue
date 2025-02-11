@@ -78,8 +78,8 @@
 
     presentation.value
       .nodeLabel('id')
-      .linkWidth((link) => (isHighlighted(link) ? 4 : 3))
-      .linkDirectionalParticles((link) => (isHighlighted(link) ? 4 : 0))
+      .linkWidth((link: GraphLink) => (isHighlighted(link) ? 4 : 3))
+      .linkDirectionalParticles((link: GraphLink) => (isHighlighted(link) ? 4 : 0))
       .linkDirectionalParticleWidth(4)
       .showNavInfo(false)
       // .linkDirectionalArrowLength(3.5)
