@@ -124,10 +124,6 @@ fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
     let matter = Matter::<YAML>::new();
 
     for entry in fs::read_dir(dir)? {
-        if metadata_list.len() >= 50 {
-            break;
-        }
-
         let entry = entry?;
         let path = entry.path();
 
