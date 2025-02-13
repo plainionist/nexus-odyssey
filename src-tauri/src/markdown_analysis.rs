@@ -1,10 +1,17 @@
 use gray_matter::engine::YAML;
 use gray_matter::Matter;
+use ignore::{gitignore::GitignoreBuilder, WalkBuilder};
+use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::Path;
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    ignore: Vec<String>,
+}
 
 #[derive(Debug, serde::Serialize)]
 struct MarkdownMeta {
@@ -33,6 +40,12 @@ struct Node {
 struct Link {
     source: String,
     target: String,
+}
+
+fn load_config(config_path: &Path) -> io::Result<Config> {
+    let config_data = fs::read_to_string(config_path)?;
+    let config: Config = serde_json::from_str(&config_data)?;
+    Ok(config)
 }
 
 fn build_graph(metadata_list: Vec<MarkdownMeta>) -> serde_json::Value {
@@ -114,28 +127,37 @@ fn create_title(path: &Path, front_matter_title: Option<String>) -> String {
     })
 }
 
-fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
-    let mut metadata_list = Vec::new();
+fn scan_markdown_files(dir: &Path, ignore_patterns: &[String]) -> io::Result<Vec<MarkdownMeta>> {
+    let mut files = Vec::new();
 
-    if !dir.is_dir() {
-        return Ok(metadata_list);
+    let mut gitignore_builder = GitignoreBuilder::new(dir);
+    for pattern in ignore_patterns {
+        gitignore_builder.add_line(Some(dir.to_path_buf()), pattern).unwrap();
     }
+
+    let gitignore = gitignore_builder.build().unwrap();
+
+    for result in WalkBuilder::new(dir).git_ignore(false).build() {
+        match result {
+            Ok(entry) => {
+                let path = entry.path();
+                if path.extension().map_or(false, |ext| ext == "md") {
+                    if !gitignore.matched(path, false).is_ignore() {
+                        files.push(path.to_path_buf());
+                    } else {
+                        println!("Ignoring: {}", path.display());
+                    }
+                }
+            }
+            Err(err) => eprintln!("Error reading directory: {}", err),
+        }
+    }
+
+    let mut metadata_list = Vec::new();
 
     let matter = Matter::<YAML>::new();
 
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-
-        if path.is_dir() {
-            metadata_list.extend(scan_markdown_files(&path)?);
-            continue;
-        }
-
-        if path.extension().map_or(true, |ext| ext != "md") {
-            continue;
-        }
-
+    for path in &files {
         println!("Analyzing: {}", path.display());
 
         match fs::read_to_string(&path) {
@@ -160,7 +182,10 @@ fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
 }
 
 pub fn analyze(dir: &Path) -> io::Result<String> {
-    scan_markdown_files(dir).map(|result| {
+    let config_path = dir.join("nexus-odyssey.json");
+    let config = load_config(&config_path).unwrap_or_else(|_| Config { ignore: vec![] });
+
+    scan_markdown_files(dir, &config.ignore).map(|result| {
         let graph_json = build_graph(result);
         let json = serde_json::to_string_pretty(&graph_json).unwrap();
         println!("Analysis complete!");

@@ -27,3 +27,4 @@ tauri-plugin-fs =  { version = "2.0.0", features = ["watch"] }
 dot-parser = "0.3.3"
 gray_matter = "0.2.8"
 serde_yaml = "0.9.34"
+ignore = "0.4.23"
