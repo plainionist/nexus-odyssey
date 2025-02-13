@@ -136,16 +136,24 @@ fn scan_markdown_files(dir: &Path) -> io::Result<Vec<MarkdownMeta>> {
             continue;
         }
 
-        let contents = fs::read_to_string(&path)?;
-        let result = matter.parse(&contents);
-        let front_matter: FrontMatter = result.data.and_then(|x| x.deserialize().ok()).unwrap_or_default();
+        println!("Analyzing: {}", path.display());
 
-        metadata_list.push(MarkdownMeta {
-            title: create_title(&path, front_matter.title),
-            file_path: path.to_string_lossy().to_string(),
-            tags: extract_tags(&front_matter.tags),
-            ignore: front_matter.ignore,
-        });
+        match fs::read_to_string(&path) {
+            Ok(contents) => {
+                let result = matter.parse(&contents);
+                let front_matter: FrontMatter = result.data.and_then(|x| x.deserialize().ok()).unwrap_or_default();
+
+                metadata_list.push(MarkdownMeta {
+                    title: create_title(&path, front_matter.title),
+                    file_path: path.to_string_lossy().to_string(),
+                    tags: extract_tags(&front_matter.tags),
+                    ignore: front_matter.ignore,
+                });
+            }
+            Err(e) => {
+                eprintln!("Skipping file {}: {}", path.display(), e);
+            }
+        }
     }
 
     Ok(metadata_list)
