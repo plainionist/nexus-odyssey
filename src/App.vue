@@ -80,9 +80,10 @@
     const nodeObjects = new Map<GraphNode, SpriteText>()
 
     presentation.value
-      .nodeLabel('id')
+      //.nodeLabel('id')
       .linkDirectionalParticles((link: GraphLink) => (isHighlighted(link) ? 4 : 0))
       .linkDirectionalParticleWidth(4)
+      .backgroundColor('#1e1e1e00')
       .showNavInfo(false)
       // .linkDirectionalArrowLength(3.5)
       // .linkDirectionalArrowRelPos(1)
